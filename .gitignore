@@ -18,6 +18,7 @@ models/*.joblib
 # Jupyter
 .ipynb_checkpoints/
 notebooks/test.py
+notebooks/*.ipynb
 
 # Logs
 logs/
