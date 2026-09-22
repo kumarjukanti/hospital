@@ -33,6 +33,6 @@ Thumbs.db
 /data/
 
 /outputs/model_table.csv
-
+db/*.db
 
 *.csv
