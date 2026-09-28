@@ -1,0 +1,44 @@
+schema: '2.0'
+stages:
+  train_risk:
+    cmd: python -m src.training_pipeline --model risk
+    deps:
+    - path: outputs/model_table.csv
+      hash: md5
+      md5: 1065faa7ac90b3ec24363587a13013ba
+      size: 4408065
+    - path: src
+      hash: md5
+      md5: c3fbea08d112541442407151fc6b84c7.dir
+      size: 48101
+      nfiles: 12
+    outs:
+    - path: models/risk_model_complete_pipeline.joblib
+      hash: md5
+      md5: cf08343ab3c8504d7b57e7dd08f2b3f5
+      size: 5276067
+    - path: outputs/feature_schema.json
+      hash: md5
+      md5: 7bdb1fb91388011b5ecc5a28fc9b819a
+      size: 1096
+  train_claim:
+    cmd: python -m src.training_pipeline --model claim
+    deps:
+    - path: outputs/feature_schema.json
+      hash: md5
+      md5: 7bdb1fb91388011b5ecc5a28fc9b819a
+      size: 1096
+    - path: outputs/model_table.csv
+      hash: md5
+      md5: 1065faa7ac90b3ec24363587a13013ba
+      size: 4408065
+    - path: src
+      hash: md5
+      md5: c3fbea08d112541442407151fc6b84c7.dir
+      size: 48101
+      nfiles: 12
+    outs:
+    - path: models/claim_model_complete_pipeline.joblib
+      hash: md5
+      md5: 37899e9b7e0016a2f44ef86998059df2
+      size: 5276579
