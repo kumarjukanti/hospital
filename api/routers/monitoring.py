@@ -1,9 +1,6 @@
-# cat > api/routers/monitoring.py <<'EOF'
 from fastapi import APIRouter
-from pexpect import EOF
 
 router = APIRouter()
-
 
 @router.get("/psi")
 def get_psi():
@@ -11,4 +8,3 @@ def get_psi():
         "status": "ok",
         "message": "PSI monitoring endpoint is available"
     }
-EOF
