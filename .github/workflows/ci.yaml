@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [main]
 
+# Required for GitHub Actions → AWS OIDC authentication
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -28,6 +33,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest httpx
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: arn:aws:iam::074839636183:role/GitHubActions-DVC-ReadOnly
+          aws-region: us-west-1
+
+      - name: Pull DVC artifacts
+        run: |
+          dvc pull -r s3store
 
       - name: Run tests
         run: |
