@@ -1,4 +1,6 @@
 [core]
-    remote = localstore
+    remote = s3store
 ['remote "localstore"']
     url = ../dvc-storage
+['remote "s3store"']
+    url = s3://healthcare-mlops-dvc-074839636183/dvc
