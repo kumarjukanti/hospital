@@ -41,38 +41,6 @@ jobs:
           ref: ${{ github.event.workflow_run.head_sha }}
 
       # ---------------------------------
-      # Debug GitHub OIDC claims
-      # ---------------------------------
-
-      - name: Debug OIDC claims
-        env:
-          ACTIONS_ID_TOKEN_REQUEST_URL: ${{ env.ACTIONS_ID_TOKEN_REQUEST_URL }}
-          ACTIONS_ID_TOKEN_REQUEST_TOKEN: ${{ env.ACTIONS_ID_TOKEN_REQUEST_TOKEN }}
-        run: |
-          TOKEN_JSON=$(curl -sS \
-            -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com")
-
-          ID_TOKEN=$(echo "$TOKEN_JSON" | jq -r '.value')
-
-          echo "$ID_TOKEN" \
-            | cut -d '.' -f 2 \
-            | base64 -d 2>/dev/null \
-            | jq '{
-                aud,
-                sub,
-                repository,
-                repository_id,
-                repository_owner,
-                repository_owner_id,
-                workflow,
-                workflow_ref,
-                ref,
-                ref_type,
-                event_name
-              }'
-
-      # ---------------------------------
       # Configure AWS credentials
       # ---------------------------------
 
@@ -81,71 +49,6 @@ jobs:
         with:
           aws-region: ${{ env.AWS_REGION }}
           role-to-assume: arn:aws:iam::074839636183:role/GitHubActions-EKS-Deploy
-
-      # ---------------------------------
-      # Verify AWS and S3 access
-      # ---------------------------------
-
-      - name: Verify AWS and S3 access
-        run: |
-          echo "========================================"
-          echo "=== AWS IDENTITY ==="
-          echo "========================================"
-
-          aws sts get-caller-identity
-
-          echo ""
-          echo "========================================"
-          echo "=== BUCKET REGION ==="
-          echo "========================================"
-
-          aws s3api get-bucket-location \
-            --bucket healthcare-mlops-dvc-074839636183
-
-          echo ""
-          echo "========================================"
-          echo "=== LIST DVC OBJECTS ==="
-          echo "========================================"
-
-          aws s3api list-objects-v2 \
-            --bucket healthcare-mlops-dvc-074839636183 \
-            --prefix dvc/files/md5/ \
-            --max-keys 10 \
-            --query 'Contents[].Key' \
-            --output text
-
-          echo ""
-          echo "========================================"
-          echo "=== HEAD DVC PREFIX ==="
-          echo "========================================"
-
-          aws s3api head-object \
-            --bucket healthcare-mlops-dvc-074839636183 \
-            --key 'dvc/files/md5' \
-            || echo "Expected: dvc/files/md5 is a prefix, not an object."
-
-          echo ""
-          echo "========================================"
-          echo "=== HEAD REAL DVC OBJECT ==="
-          echo "========================================"
-
-          aws s3api head-object \
-            --bucket healthcare-mlops-dvc-074839636183 \
-            --key 'dvc/files/md5/10/65faa7ac90b3ec24363587a13013ba'
-
-          echo ""
-          echo "========================================"
-          echo "=== DOWNLOAD REAL DVC OBJECT ==="
-          echo "========================================"
-
-          aws s3 cp \
-            s3://healthcare-mlops-dvc-074839636183/dvc/files/md5/10/65faa7ac90b3ec24363587a13013ba \
-            /tmp/test-dvc-object
-
-          echo ""
-          echo "========================================"
-          echo "=== S3 ACCESS TESTS COMPLETED ==="
-          echo "========================================"
 
       # ---------------------------------
       # Install DVC
