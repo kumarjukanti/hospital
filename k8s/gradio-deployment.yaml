@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: healthcare-gradio
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: healthcare-gradio
+
+  template:
+    metadata:
+      labels:
+        app: healthcare-gradio
+
+    spec:
+      containers:
+        - name: healthcare-gradio
+          image: IMAGE_GRADIO
+          imagePullPolicy: Always
+
+          env:
+            - name: FASTAPI_BASE_URL
+              value: "http://healthcare-api:8000"
+
+          ports:
+            - containerPort: 7860
