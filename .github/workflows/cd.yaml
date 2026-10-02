@@ -11,7 +11,6 @@ on:
 jobs:
   build-push-deploy:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
-
     runs-on: ubuntu-latest
 
     permissions:
@@ -27,11 +26,38 @@ jobs:
       IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}
 
     steps:
-
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Debug OIDC claims
+        env:
+          ACTIONS_ID_TOKEN_REQUEST_URL: ${{ env.ACTIONS_ID_TOKEN_REQUEST_URL }}
+          ACTIONS_ID_TOKEN_REQUEST_TOKEN: ${{ env.ACTIONS_ID_TOKEN_REQUEST_TOKEN }}
+        run: |
+          TOKEN_JSON=$(curl -sS \
+            -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com")
+
+          ID_TOKEN=$(echo "$TOKEN_JSON" | jq -r '.value')
+
+          echo "$ID_TOKEN" \
+            | cut -d '.' -f 2 \
+            | base64 -d 2>/dev/null \
+            | jq '{
+                aud,
+                sub,
+                repository,
+                repository_id,
+                repository_owner,
+                repository_owner_id,
+                workflow,
+                workflow_ref,
+                ref,
+                ref_type,
+                event_name
+              }'
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v6
@@ -57,15 +83,20 @@ jobs:
 
       - name: Build API image
         run: |
-          docker build -t $ECR_REPOSITORY_API:$IMAGE_TAG -f Dockerfile.api .
+          docker build \
+            -t $ECR_REPOSITORY_API:$IMAGE_TAG \
+            -f Dockerfile.api .
 
       - name: Tag API image
         run: |
-          docker tag $ECR_REPOSITORY_API:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY_API:$IMAGE_TAG
+          docker tag \
+            $ECR_REPOSITORY_API:$IMAGE_TAG \
+            $ECR_REGISTRY/$ECR_REPOSITORY_API:$IMAGE_TAG
 
       - name: Push API image
         run: |
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY_API:$IMAGE_TAG
+          docker push \
+            $ECR_REGISTRY/$ECR_REPOSITORY_API:$IMAGE_TAG
 
       # -----------------------------
       # Build Gradio
@@ -73,15 +104,20 @@ jobs:
 
       - name: Build Gradio image
         run: |
-          docker build -t $ECR_REPOSITORY_GRADIO:$IMAGE_TAG -f Dockerfile.gradio .
+          docker build \
+            -t $ECR_REPOSITORY_GRADIO:$IMAGE_TAG \
+            -f Dockerfile.gradio .
 
       - name: Tag Gradio image
         run: |
-          docker tag $ECR_REPOSITORY_GRADIO:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY_GRADIO:$IMAGE_TAG
+          docker tag \
+            $ECR_REPOSITORY_GRADIO:$IMAGE_TAG \
+            $ECR_REGISTRY/$ECR_REPOSITORY_GRADIO:$IMAGE_TAG
 
       - name: Push Gradio image
         run: |
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY_GRADIO:$IMAGE_TAG
+          docker push \
+            $ECR_REGISTRY/$ECR_REPOSITORY_GRADIO:$IMAGE_TAG
 
       # -----------------------------
       # Configure Kubernetes
@@ -89,7 +125,9 @@ jobs:
 
       - name: Update kubeconfig
         run: |
-          aws eks update-kubeconfig --region $AWS_REGION --name $EKS_CLUSTER_NAME
+          aws eks update-kubeconfig \
+            --region $AWS_REGION \
+            --name $EKS_CLUSTER_NAME
 
       # -----------------------------
       # Deploy to EKS
@@ -97,8 +135,13 @@ jobs:
 
       - name: Update Kubernetes manifests
         run: |
-          sed -i "s|IMAGE_API|$ECR_REGISTRY/$ECR_REPOSITORY_API:$IMAGE_TAG|g" k8s/api-deployment.yaml
-          sed -i "s|IMAGE_GRADIO|$ECR_REGISTRY/$ECR_REPOSITORY_GRADIO:$IMAGE_TAG|g" k8s/gradio-deployment.yaml
+          sed -i \
+            "s|IMAGE_API|$ECR_REGISTRY/$ECR_REPOSITORY_API:$IMAGE_TAG|g" \
+            k8s/api-deployment.yaml
+
+          sed -i \
+            "s|IMAGE_GRADIO|$ECR_REGISTRY/$ECR_REPOSITORY_GRADIO:$IMAGE_TAG|g" \
+            k8s/gradio-deployment.yaml
 
       - name: Deploy to EKS
         run: |
@@ -106,8 +149,12 @@ jobs:
 
       - name: Wait for API deployment
         run: |
-          kubectl rollout status deployment/healthcare-api --timeout=5m
+          kubectl rollout status \
+            deployment/healthcare-api \
+            --timeout=5m
 
       - name: Wait for Gradio deployment
         run: |
-          kubectl rollout status deployment/healthcare-gradio --timeout=5m
+          kubectl rollout status \
+            deployment/healthcare-gradio \
+            --timeout=5m
